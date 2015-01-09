@@ -1607,8 +1607,12 @@ idPlayer::idPlayer():
 	focusCharacter			= NULL;
 	talkCursor				= 0;
 	focusVehicle			= NULL;
+	vehicleCursor			= 0;
 	cursor					= NULL;
 	
+	inVehicle				= false;
+	vehicleImDriving		= NULL;
+
 	oldMouseX				= 0;
 	oldMouseY				= 0;
 	
@@ -1815,7 +1819,11 @@ void idPlayer::Init()
 	focusCharacter			= NULL;
 	talkCursor				= 0;
 	focusVehicle			= NULL;
+	vehicleCursor			= 0;
 	
+	inVehicle				= false;
+	vehicleImDriving		= NULL;
+
 	// remove any damage effects
 	playerView.ClearEffects();
 	
@@ -2496,8 +2504,12 @@ void idPlayer::Save( idSaveGame* savefile ) const
 	savefile->WriteInt( talkCursor );
 	savefile->WriteInt( focusTime );
 	savefile->WriteObject( focusVehicle );
+	savefile->WriteInt( vehicleCursor );
 	savefile->WriteUserInterface( cursor, false );
 	
+	savefile->WriteBool( inVehicle );
+	savefile->WriteObject( vehicleImDriving );
+
 	savefile->WriteInt( oldMouseX );
 	savefile->WriteInt( oldMouseY );
 	
@@ -2812,8 +2824,12 @@ void idPlayer::Restore( idRestoreGame* savefile )
 	savefile->ReadInt( talkCursor );
 	savefile->ReadInt( focusTime );
 	savefile->ReadObject( reinterpret_cast<idClass*&>( focusVehicle ) );
+	savefile->ReadInt( vehicleCursor );
 	savefile->ReadUserInterface( cursor );
 	
+	savefile->ReadBool( inVehicle );
+	savefile->ReadObject( reinterpret_cast<idClass*&>( vehicleImDriving ) );
+
 	savefile->ReadInt( oldMouseX );
 	savefile->ReadInt( oldMouseY );
 	
@@ -5681,6 +5697,38 @@ void idPlayer::Weapon_NPC()
 
 /*
 ===============
+idPlayer::Weapon_Vehicle
+===============
+*/
+void idPlayer::Weapon_Vehicle()
+{
+	if( idealWeapon != currentWeapon )
+	{
+		Weapon_Combat();
+	}
+	StopFiring();
+	weapon.GetEntity()->LowerWeapon();
+
+	bool wasDown = ( oldButtons & ( BUTTON_ATTACK | BUTTON_USE ) ) != 0;
+	bool isDown = ( usercmd.buttons & ( BUTTON_ATTACK | BUTTON_USE ) ) != 0;
+	if( isDown && !wasDown )
+	{
+		buttonMask |= BUTTON_ATTACK;
+		if ( !inVehicle )
+		{
+			Hide(); //FIXME and TODO don't just hide the player also set it to a driving state
+			inVehicle = true;
+			vehicleImDriving = focusVehicle;
+		} else {
+			Show();
+			inVehicle = false;
+			vehicleImDriving = NULL;
+		}
+		focusVehicle->Use( this );
+	}
+}
+/*
+===============
 idPlayer::LowerWeapon
 ===============
 */
@@ -5859,6 +5907,19 @@ void idPlayer::UpdateWeapon()
 	else 	if( focusCharacter && ( focusCharacter->health > 0 ) )
 	{
 		Weapon_NPC();
+	}
+	else 	if( focusVehicle )
+	{
+		if ( !vehicleImDriving )
+		{
+			Weapon_Vehicle();
+		} else {
+			if ( vehicleImDriving == focusVehicle )
+			{
+				Weapon_Vehicle();
+			}
+		}
+
 	}
 	else
 	{
@@ -6366,6 +6427,7 @@ void idPlayer::ClearFocus()
 	focusUI			= NULL;
 	focusVehicle	= NULL;
 	talkCursor		= 0;
+	vehicleCursor	= 0;
 }
 
 /*
@@ -6387,6 +6449,7 @@ void idPlayer::UpdateFocus()
 	idAI*		oldChar;
 	int			oldTalkCursor;
 	idAFEntity_Vehicle* oldVehicle;
+	int			oldVehicleCursor;
 	int			i, j;
 	idVec3		start, end;
 	bool		allowFocus;
@@ -6403,8 +6466,8 @@ void idPlayer::UpdateFocus()
 	}
 	
 	// only update the focus character when attack button isn't pressed so players
-	// can still chainsaw NPC's
-	if( common->IsMultiplayer() || ( !focusCharacter && ( usercmd.buttons & BUTTON_ATTACK ) ) )
+	// can still chainsaw NPC's or the vehicle
+	if( common->IsMultiplayer() || ( ( !focusCharacter || !focusVehicle ) && ( usercmd.buttons & BUTTON_ATTACK ) ) )
 	{
 		allowFocus = false;
 	}
@@ -6418,6 +6481,7 @@ void idPlayer::UpdateFocus()
 	oldChar			= focusCharacter;
 	oldTalkCursor	= talkCursor;
 	oldVehicle		= focusVehicle;
+	oldVehicleCursor= vehicleCursor;
 	
 	if( focusTime <= gameLocal.time )
 	{
@@ -6512,6 +6576,7 @@ void idPlayer::UpdateFocus()
 				{
 					ClearFocus();
 					focusVehicle = static_cast<idAFEntity_Vehicle*>( ent );
+					vehicleCursor = 1;
 					focusTime = gameLocal.time + FOCUS_TIME;
 					break;
 				}

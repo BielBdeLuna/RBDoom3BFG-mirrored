@@ -871,8 +871,13 @@ private:
 	int						talkCursor;				// show the state of the focusCharacter (0 == can't talk/dead, 1 == ready to talk, 2 == busy talking)
 	int						focusTime;
 	idAFEntity_Vehicle* 	focusVehicle;
+	int						vehicleCursor;
 	idUserInterface* 		cursor;
 	
+	bool					inVehicle;
+	idAFEntity_Vehicle* 	vehicleImDriving;
+
+
 	// full screen guis track mouse movements directly
 	int						oldMouseX;
 	int						oldMouseY;
@@ -923,6 +928,7 @@ private:
 	void					FireWeapon();
 	void					Weapon_Combat();
 	void					Weapon_NPC();
+	void					Weapon_Vehicle();
 	void					Weapon_GUI();
 	void					UpdateWeapon();
 	void					UpdateFlashlight();
