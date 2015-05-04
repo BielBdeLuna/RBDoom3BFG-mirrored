@@ -5,50 +5,68 @@
  *      Author: biel
  */
 
-
-#include "UsableEntity.h"
-
-const idEventDef EV_Use( "use", "v");
-
 /*
 ===============================================================================
 
-	blUsableEntity
+	blUsable
 
-    idEntity whith interaction capabilities
+    idEntity whit interaction capabilities
+    you can set it with "powered_off" and with "start_on"
+    it won't fire of it's targets unless is powered and turned on
 
 ===============================================================================
 */
 
-//ABSTRACT_DECLARATION( idEntity, blUsableEntity )
-CLASS_DECLARATION( idEntity, blUsableEntity )
-	EVENT( EV_Use,				blUsableEntity::Event_Use )
-    //EVENT( EV_Interact,         blUsableEntity::Event_Interact )
+CLASS_DECLARATION( idEntity, blUsable )
+	EVENT( EV_Activate,				blUsable::Event_Activate )
 END_CLASS
 
 
 /*
 ================
-blUsableEntity::blUsableEntity
+blUsable::blUsable
 ================
 */
-blUsableEntity::blUsableEntity( void ) {
-    activated = false;
-    dest_angles.Zero();
-	dest_position.Zero();
+blUsable::blUsable( void ) {
+    turned		= false;
+    powered		= true;
+    activated 	= false;
+    //dest_angles.Zero();
+	//dest_position.Zero();
 }
 
 /*
 ================
-blUsableEntity::Spawn
+blUsable::Spawn
 ================
 */
-void blUsableEntity::Spawn( void ) {
-    idEntity	*ent;
+void blUsable::Spawn( void ) {
+	boolean powered_off;
+	boolean	start_on;
+    //idEntity	*ent;
 
-    gameLocal.Printf( "IT SPAWNS!\n" );
-    activated = false;
+    //gameLocal.Printf( "IT SPAWNS!\n" );
+	spawnArgs.GetBool( "powered_off", "0", powered_off );
+	spawnArgs.GetBool( "start_on", "0", start_on );
+	if ( powered_off ) {
+		powered = false;
+	} else {
+		powered = true;
+	}
 
+	if ( start_on ) {
+		turned = true;
+	} else {
+		turned = false;
+	}
+
+	if ( powered && turned ) {
+		activated = true;
+	} else {
+		activated = false;
+	}
+
+/*
 	//ent = this;
     dest_position = GetPhysics()->GetOrigin();
 	dest_angles = GetPhysics()->GetAxis().ToAngles();
@@ -67,22 +85,45 @@ void blUsableEntity::Spawn( void ) {
 	SetPhysics( &physicsObj );
 
 
-
+*/
     fl.takedamage = false;
 }
 
-void blUsableEntity::Event_Use( void ) {
-    gameLocal.Printf( "it works!\n" );
-    activated = true;
-    return;
+void blUsable::TestFireTargets( void ) {
+	if ( powered && turned ) {
+		activated = false;
+	} else {
+		activated = false;
+	}
+
+	if ( activated ) {
+		gameLocal.Printf( "activated\n" );
+	} else {
+		gameLocal.Printf( "non activated\n" );
+	}
 }
 
-void blUsableEntity::Event_Interact( void ) {
-    gameLocal.Printf( "it works!\n" );
-    activated = true;
-    return;
+void blUsable::Event_Activate( idEntity* activator )
+{
+	if ( powered ) {
+		powered = false;
+		gameLocal.DPrintf( "powered OFF\n" );
+	} else {
+		powered = true;
+		gameLocal.DPrintf( "powered ON\n" );
+	}
+
+	TestFireTargets();
 }
 
+void blUsable::Interact( void ) {
+	if ( turned ) {
+		turned = false
+		gameLocal.DPrintf( "turned OFF\n" );
+	} else {
+		turned = true;
+		gameLocal.DPrintf( "turned ON\n" );
+	}
 
-
-
+	TestFireTargets();
+}

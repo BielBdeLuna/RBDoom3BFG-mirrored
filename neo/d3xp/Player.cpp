@@ -1608,8 +1608,12 @@ idPlayer::idPlayer():
 	talkCursor				= 0;
 	focusVehicle			= NULL;
 	vehicleCursor			= 0;
+	focusUsable				= NULL;
+	usableCursor			= 0;
 	cursor					= NULL;
 	
+	inUsableMiniGame		= false;
+
 	inVehicle				= false;
 	vehicleImDriving		= NULL;
 
@@ -1819,8 +1823,12 @@ void idPlayer::Init()
 	focusCharacter			= NULL;
 	talkCursor				= 0;
 	focusVehicle			= NULL;
+	focusUsable				= NULL;
+	usableCursor			= 0;
 	vehicleCursor			= 0;
 	
+	inUsableMiniGame		= false;
+
 	inVehicle				= false;
 	vehicleImDriving		= NULL;
 
@@ -2505,8 +2513,12 @@ void idPlayer::Save( idSaveGame* savefile ) const
 	savefile->WriteInt( focusTime );
 	savefile->WriteObject( focusVehicle );
 	savefile->WriteInt( vehicleCursor );
+	savefile->WriteObject( focusUsable );
+	savefile->WriteInt( usableCursor );
 	savefile->WriteUserInterface( cursor, false );
 	
+	savefile->WriteBool( inUsableMiniGame );
+
 	savefile->WriteBool( inVehicle );
 	savefile->WriteObject( vehicleImDriving );
 
@@ -2825,8 +2837,12 @@ void idPlayer::Restore( idRestoreGame* savefile )
 	savefile->ReadInt( focusTime );
 	savefile->ReadObject( reinterpret_cast<idClass*&>( focusVehicle ) );
 	savefile->ReadInt( vehicleCursor );
+	savefile->ReadObject( reinterpret_cast<idClass*&>( focusUsable ) );
+	savefile->ReadInt( usableCursor );
 	savefile->ReadUserInterface( cursor );
 	
+	savefile->ReadBool( inUsableMiniGame );
+
 	savefile->ReadBool( inVehicle );
 	savefile->ReadObject( reinterpret_cast<idClass*&>( vehicleImDriving ) );
 
@@ -5729,6 +5745,34 @@ void idPlayer::Weapon_Vehicle()
 }
 /*
 ===============
+idPlayer::Weapon_Usable
+===============
+*/
+void idPlayer::Weapon_Usable()
+{
+	if( idealWeapon != currentWeapon )
+	{
+		Weapon_Combat();
+	}
+	StopFiring();
+	weapon.GetEntity()->LowerWeapon();
+
+	bool wasDown = ( oldButtons & ( BUTTON_ATTACK | BUTTON_USE ) ) != 0;
+	bool isDown = ( usercmd.buttons & ( BUTTON_ATTACK | BUTTON_USE ) ) != 0;
+	if( isDown && !wasDown )
+	{
+		buttonMask |= BUTTON_ATTACK;
+		if ( !inUsableMiniGame ) //TODO add a check in usable in order to test if it has a minigame
+		{
+			inUsableMiniGame = true;
+		} else {
+			inUsableMiniGame = false;
+		}
+		focusUsable->Interact( this );
+	}
+}
+/*
+===============
 idPlayer::LowerWeapon
 ===============
 */
@@ -5920,6 +5964,9 @@ void idPlayer::UpdateWeapon()
 			}
 		}
 
+	}
+	else if	( focusUsable ) {
+		Weapon_Usable();
 	}
 	else
 	{
@@ -6426,8 +6473,10 @@ void idPlayer::ClearFocus()
 	focusGUIent		= NULL;
 	focusUI			= NULL;
 	focusVehicle	= NULL;
+	focusUsable		= NULL;
 	talkCursor		= 0;
 	vehicleCursor	= 0;
+	usableCursor	= 0;
 }
 
 /*
@@ -6450,6 +6499,8 @@ void idPlayer::UpdateFocus()
 	int			oldTalkCursor;
 	idAFEntity_Vehicle* oldVehicle;
 	int			oldVehicleCursor;
+	blUsable*	oldUsable;
+	int			oldUsableCursor;
 	int			i, j;
 	idVec3		start, end;
 	bool		allowFocus;
@@ -6467,7 +6518,7 @@ void idPlayer::UpdateFocus()
 	
 	// only update the focus character when attack button isn't pressed so players
 	// can still chainsaw NPC's or the vehicle
-	if( common->IsMultiplayer() || ( ( !focusCharacter || !focusVehicle ) && ( usercmd.buttons & BUTTON_ATTACK ) ) )
+	if( common->IsMultiplayer() || ( ( !focusCharacter || !focusVehicle || !focusUsable ) && ( usercmd.buttons & BUTTON_ATTACK ) ) )
 	{
 		allowFocus = false;
 	}
@@ -6482,6 +6533,8 @@ void idPlayer::UpdateFocus()
 	oldTalkCursor	= talkCursor;
 	oldVehicle		= focusVehicle;
 	oldVehicleCursor= vehicleCursor;
+	oldUsable		= focusUsable;
+	oldUsableCursor	= usableCursor;
 	
 	if( focusTime <= gameLocal.time )
 	{
@@ -6577,6 +6630,20 @@ void idPlayer::UpdateFocus()
 					ClearFocus();
 					focusVehicle = static_cast<idAFEntity_Vehicle*>( ent );
 					vehicleCursor = 1;
+					focusTime = gameLocal.time + FOCUS_TIME;
+					break;
+				}
+				continue;
+			}
+
+			if( ent->IsType( blUsable::Type ) )
+			{
+				gameLocal.clip.TracePoint( trace, start, end, MASK_SHOT_RENDERMODEL, this );
+				if( ( trace.fraction < 1.0f ) && ( trace.c.entityNum == ent->entityNumber ) )
+				{
+					ClearFocus();
+					focusUsable = static_cast<blUsable*>( ent );
+					usableCursor = 1;
 					focusTime = gameLocal.time + FOCUS_TIME;
 					break;
 				}

@@ -5,56 +5,61 @@
  *      Author: biel
  */
 
-#ifndef USABLEENTITY_H_
-#define USABLEENTITY_H_
+/*
+===============================================================================
 
-#include "physics/Physics_Parametric.h"
-#include "Entity.h"
+	blUsable
 
-extern const idEventDef EV_Use;
+===============================================================================
+*/
 
-class blUsableEntity : public idEntity {
+class blUsable : public idEntity
+{
 public:
-	CLASS_PROTOTYPE( blUsableEntity );
+	CLASS_PROTOTYPE( blUsable  );
 
-                            blUsableEntity( void );
-//                            ~blUsableEntity( void );
+	blUsable ( void );
+	//                    	~blUsable ( void );
 
 	void					Spawn( void );
-	void			        Event_Use( void );
-    void			        Event_Interact( void );
+	void					TestFireTargets( void );
+	void					Interact( void );
+	//void					Event_PostSpawn();
+	void					Event_Activate( idEntity* activator );
 protected:
 
     bool                    activated;
+    bool					turned;
+    bool					powered;
 
-    idPhysics_Parametric	physicsObj;
+    //idPhysics_Parametric	physicsObj;
 
 private:
-
-    idAngles				dest_angles;
-	idVec3					dest_position;
+    //void					ToggleState( void );
+    //idAngles				dest_angles;
+	//idVec3					dest_position;
 };
 
 /*
 
-class blUsableEntityTarget : public blUsableEntity {
+class blUsableTarget : public blUsable {
 public:
-	CLASS_PROTOTYPE( blUsableEntityTarget );
+	CLASS_PROTOTYPE( blUsableTarget );
 
-                            blUsableEntityTarget( void );
-							~blUsableEntityTarget( void );
+                            blUsableTarget( void );
+							~blUsableTarget( void );
 
 	void					Spawn( void );
 	void			        Event_Use( void );
     void                    Target( void );
 };
 
-class blUsableEntityMounted : public blUsableEntity {
+class blUsableMounted : public blUsable {
 public:
-	CLASS_PROTOTYPE( blUsableEntityMounted );
+	CLASS_PROTOTYPE( blUsableMounted );
 
-                            blUsableEntityMounted( void );
-							~blUsableEntityMounted( void );
+                            blUsableMounted( void );
+							~blUsableMounted( void );
 
 	void					Spawn( void );
     void                    Event_Use( idPlayer *player );
@@ -64,4 +69,3 @@ protected:
     jointHandle_t			eyesJoint;
 };
 */
-#endif /* USABLEENTITY_H_ */

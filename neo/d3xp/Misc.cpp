@@ -4439,3 +4439,265 @@ void idPortalSky::Event_Activate( idEntity* activator )
 {
 	gameLocal.SetPortalSkyEnt( this );
 }
+
+/*
+===============================================================================
+
+	blUsable
+
+    idEntity whit interaction capabilities
+    you can set it with "powered_off" and with "start_on"
+    it won't fire of it's targets unless is powered and turned on
+
+===============================================================================
+*/
+
+CLASS_DECLARATION( idEntity, blUsable )
+	EVENT( EV_Activate,				blUsable::Event_Activate )
+END_CLASS
+
+
+/*
+================
+blUsable::blUsable
+================
+*/
+blUsable::blUsable( void ) {
+    turned		= false;
+    powered		= true;
+    activated 	= false;
+    last_state	= false;
+    lSwitch		= false;
+    retrigger 	= true;
+    loop		= true;
+    goBack		= false;
+    wait		= 0;
+    delay		= 0;
+    maxOptions	= 0;
+    scriptFunction = NULL;
+}
+
+/*
+===============
+blUsable::Save
+===============
+*/
+void blUsable::Save( idSaveGame* savefile ) const
+{
+	savefile->WriteBool( turned );
+	savefile->WriteBool( powered );
+	savefile->WriteBool( activated );
+	if( scriptFunction )
+	{
+		savefile->WriteString( scriptFunction->Name() );
+	} else {
+		savefile->WriteString( "" );
+	}
+}
+
+/*
+===============
+blUsable::Restore
+===============
+*/
+void blUsable::Restore( idRestoreGame* savefile )
+{
+	idStr funcname;
+
+	savefile->ReadBool( turned );
+	savefile->ReadBool( powered );
+	savefile->ReadBool( activated );
+
+	savefile->ReadString( funcname );
+	if( funcname.Length() )	{
+		scriptFunction = gameLocal.program.FindFunction( funcname );
+		if( scriptFunction == NULL ) {
+			gameLocal.Warning( "blUsable '%s' at (%s) calls unknown function '%s'", name.c_str(), GetPhysics()->GetOrigin().ToString( 0 ), funcname.c_str() );
+		}
+	} else {
+		scriptFunction = NULL;
+	}
+}
+
+/*
+================
+blUsable::Spawn
+================
+*/
+void blUsable::Spawn( void ) {
+	bool	powered_off;
+	bool	start_on;
+
+	spawnArgs.GetBool( "powered_off", "0", powered_off );
+	spawnArgs.GetBool( "start_on", "0", start_on );
+	spawnArgs.GetBool( "light_switch", "0", lSwitch );
+
+	idStr funcname = spawnArgs.GetString( "call", "" );
+	if( funcname.Length() ) {
+		scriptFunction = gameLocal.program.FindFunction( funcname );
+		if( scriptFunction == NULL ) {
+			gameLocal.Warning( "blUsable '%s' at (%s) calls unknown function '%s'", name.c_str(), GetPhysics()->GetOrigin().ToString( 0 ), funcname.c_str() );
+		}
+	} else {
+		scriptFunction = NULL;
+	}
+
+	if ( powered_off ) {
+		PowerDown();
+	} else {
+		PowerUp();
+	}
+
+	if ( start_on ) {
+		TurnOn();
+	} else {
+		TurnOff();
+	}
+
+	TestFireTargets( NULL );
+
+    fl.takedamage = false;
+}
+
+/*
+================
+blUsable::CallScript
+================
+*/
+void blUsable::CallScript() const
+{
+	idThread* thread;
+
+	if( scriptFunction )
+	{
+		thread = new idThread( scriptFunction );
+		thread->DelayedStart( 0 );
+	}
+}
+
+void blUsable::FindTargets()
+{
+	int			i;
+
+	// targets can be a list of multiple names
+	gameLocal.GetTargets( spawnArgs, targets, "target" );
+
+	// ensure that we don't target ourselves since that could cause an infinite loop when activating entities
+	for( i = 0; i < targets.Num(); i++ )
+	{
+		if( targets[ i ].GetEntity() == this )
+		{
+			gameLocal.Error( "Entity '%s' is targeting itself", name.c_str() );
+		}
+	}
+}
+
+/*
+================
+blUsable::GetScriptFunction
+================
+*/
+const function_t* blUsable::GetScriptFunction() const
+{
+	return scriptFunction;
+}
+
+void blUsable::ActivateCurrentTarget( idEntity* activator ) const
+{
+	idEntity*	ent;
+	int			i, j;
+
+	for( i = 0; i < targets.Num(); i++ )
+	{
+		ent = targets[ i ].GetEntity();
+		if( !ent )
+		{
+			continue;
+		}
+		if( ent->RespondsTo( EV_Activate ) || ent->HasSignal( SIG_TRIGGER ) )
+		{
+			ent->Signal( SIG_TRIGGER );
+			ent->ProcessEvent( &EV_Activate, activator );
+		}
+		for( j = 0; j < MAX_RENDERENTITY_GUI; j++ )
+		{
+			if( ent->renderEntity.gui[ j ] )
+			{
+				ent->renderEntity.gui[ j ]->Trigger( gameLocal.time );
+			}
+		}
+	}
+	currentSwitch = idealSwitch;
+}
+
+void blUsable::TestFireTargets( idEntity* activator ) {
+	if ( powered && turned ) {
+		activated = true;
+	} else {
+		activated = false;
+	}
+
+	if ( activated ) {
+		gameLocal.Printf( "activated\n" );
+		ActivateTargets( activator );
+		CallScript();
+	} else {
+		if ( last_state == true ) {
+			if ( lSwitch ) {
+				ActivateTargets( activator );
+				CallScript();
+			}
+		}
+		gameLocal.Printf( "de-activated\n" );
+	}
+	last_state = activated;
+}
+
+void blUsable::Event_Activate( idEntity* activator )
+{
+	if ( powered ) {
+		PowerDown();
+	} else {
+		PowerUp();
+	}
+
+	TestFireTargets( activator );
+}
+
+void blUsable::Interact( idEntity* activator ) {
+	if ( turned ) {
+		TurnOff();
+	} else {
+		TurnOn();
+	}
+
+	TestFireTargets( activator );
+}
+
+void blUsable::PowerUp( void ) {
+	if ( !powered ) {
+		powered = true;
+		gameLocal.DPrintf( "powered UP\n" );
+	}
+}
+
+void blUsable::PowerDown( void ) {
+	if ( powered ) {
+		powered = false;
+		gameLocal.DPrintf( "powered DOWN\n" );
+	}
+}
+
+void blUsable::TurnOn( void ) {
+	if ( !turned ) {
+		turned = true;
+		gameLocal.DPrintf( "turned ON\n" );
+	}
+}
+
+void blUsable::TurnOff( void ) {
+	if ( turned ) {
+		turned = false;
+		gameLocal.DPrintf( "turned OFF\n" );
+	}
+}

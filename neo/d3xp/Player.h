@@ -872,8 +872,12 @@ private:
 	int						focusTime;
 	idAFEntity_Vehicle* 	focusVehicle;
 	int						vehicleCursor;
+	blUsable*				focusUsable;
+	int						usableCursor;
 	idUserInterface* 		cursor;
 	
+	bool					inUsableMiniGame;
+
 	bool					inVehicle;
 	idAFEntity_Vehicle* 	vehicleImDriving;
 
@@ -929,6 +933,7 @@ private:
 	void					Weapon_Combat();
 	void					Weapon_NPC();
 	void					Weapon_Vehicle();
+	void					Weapon_Usable();
 	void					Weapon_GUI();
 	void					UpdateWeapon();
 	void					UpdateFlashlight();

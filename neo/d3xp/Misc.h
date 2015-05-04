@@ -957,5 +957,64 @@ public:
 	void				Event_Activate( idEntity* activator );
 };
 
+/*
+===============================================================================
+
+	blUsable
+
+===============================================================================
+*/
+
+class blUsable : public idEntity
+{
+public:
+	CLASS_PROTOTYPE( blUsable  );
+
+	blUsable ( void );
+	//                    	~blUsable ( void );
+
+	void					Save( idSaveGame* savefile ) const;
+	void					Restore( idRestoreGame* savefile );
+
+	void					Spawn( void );
+	void					Think();
+	void					Interact( idEntity* activator );
+	//void					Event_PostSpawn();
+	void					Event_Activate( idEntity* activator );
+
+	const function_t* 		GetScriptFunction() const;
+protected:
+	void					PowerUp		( void );
+	void					PowerDown	( void );
+	void					TurnOn		( void );
+	void					TurnOff		( void );
+	void					CallScript	() const;
+	void					ActivateCurrentTarget( idEntity* activator ) const
+	void					TestFireTargets( idEntity* activator );
+
+	const function_t* 		scriptFunction;
+
+    bool                    activated;
+    bool					last_state;
+    bool					turned;
+    bool					powered;
+    bool					lSwitch;	// light switch TODO delete
+
+    bool					loop;		// in the end loops to first pos.
+    bool					goBack; 	// in the end goes back to last position until it reaches the first pos.
+
+    bool					retrigger;	// whenever we change the switch we re-trigger back the last target.
+
+private:
+
+    int						wait;		// the time it needs in order to be able to be changed again.
+    int						delay;		// the time it needs before we trigger after we switch it on/off
+
+    int						maxOptions;	// the ammount of switch options (given by the different targetN spawnarg)
+
+    int						idealSwitch;
+    int						currentSwitch;
+
+};
 
 #endif /* !__GAME_MISC_H__ */
