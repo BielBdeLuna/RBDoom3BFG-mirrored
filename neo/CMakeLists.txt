@@ -625,7 +625,7 @@ set(GAMED3XP_INCLUDES
 	d3xp/Leaderboards.h
 	d3xp/Light.h
 	d3xp/Misc.h
-    d3xp/UsableEntity.h
+	#d3xp/UsableEntity.h
 	d3xp/Moveable.h
 	d3xp/Mover.h
 	d3xp/MultiplayerGame.h
@@ -663,7 +663,7 @@ set(GAMED3XP_SOURCES
 	d3xp/Leaderboards.cpp
 	d3xp/Light.cpp
 	d3xp/Misc.cpp
-    d3xp/UsableEntity.cpp
+    #d3xp/UsableEntity.cpp
 	d3xp/Moveable.cpp
 	d3xp/Mover.cpp
 	d3xp/MultiplayerGame.cpp
