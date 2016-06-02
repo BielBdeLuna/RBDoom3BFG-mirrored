@@ -27,6 +27,9 @@ option(ONATIVE
 option(WINRT
 		"Build for Windows RT" OFF)
 		
+option(WINDOWS10
+		"Build for Windows 10" OFF)
+		
 option(USE_SYSTEM_ZLIB
                 "Use the system zlib instead of the bundled one" OFF)
 
@@ -193,12 +196,12 @@ elseif(MSVC)
                                        #-DUSE_OPENAL
 					-DUSE_EXCEPTIONS)
         ## Check for Version ##
-        if( WINRT ) # Windows RT
-                add_definitions(-DUSE_WINRT)
+        if( WINRT OR WINDOWS10 ) # Windows RT
+			add_definitions(-DUSE_WINRT)
         endif()
 
         if (USE_INTRINSICS)
-                add_definitions(-DUSE_INTRINSICS)
+			add_definitions(-DUSE_INTRINSICS)
         endif()
 					
 	if(NOT CMAKE_CL_64)
@@ -400,6 +403,7 @@ file(GLOB RENDERER_JOBS_STATICSHADOWVOLUME_INCLUDES renderer/jobs/staticshadowvo
 file(GLOB RENDERER_JOBS_STATICSHADOWVOLUME_SOURCES renderer/jobs/staticshadowvolume/*.cpp)
 file(GLOB RENDERER_OPENGL_INCLUDES renderer/OpenGL/*.h)
 file(GLOB RENDERER_OPENGL_SOURCES renderer/OpenGL/*.cpp)
+file(GLOB RENDERER_SMAA_INCLUDES renderer/SMAA/*.h)
 
 file(GLOB IRRXML_INCLUDES libs/irrxml/src/*.h)
 file(GLOB IRRXML_SOURCES libs/irrxml/src/*.cpp)
@@ -988,6 +992,8 @@ source_group("renderer\\jobs\\staticshadowvolume" FILES ${RENDERER_JOBS_STATICSH
 source_group("renderer\\OpenGL" FILES ${RENDERER_OPENGL_INCLUDES})
 source_group("renderer\\OpenGL" FILES ${RENDERER_OPENGL_SOURCES})
 
+source_group("renderer\\SMAA" FILES ${RENDERER_SMAA_INCLUDES})
+
 source_group("libs\\irrxml" FILES ${IRRXML_INCLUDES})
 source_group("libs\\irrxml" FILES ${IRRXML_SOURCES})
 
@@ -1150,6 +1156,7 @@ set(RBDOOM3_INCLUDES
 			${RENDERER_JOBS_PRELIGHTSHADOWVOLUME_INCLUDES}
 			${RENDERER_JOBS_STATICSHADOWVOLUME_INCLUDES}
 			${RENDERER_OPENGL_INCLUDES}
+			${RENDERER_SMAA_INCLUDES}
 			#${IRRXML_INCLUDES}
 			${JPEG_INCLUDES}
 			${PNG_INCLUDES}
@@ -1264,9 +1271,20 @@ if(MSVC)
 		# endif()
 		
 	# else()
+	
+	if(WINDOWS10)
+		set(DirectX_LIBRARIES
+			dinput8
+			dsound
+			dxguid
+			#dxerr
+			Xinput
+			xaudio2.lib
+			)
+	else()
 		find_package(DirectX REQUIRED)
 		include_directories(${DirectX_INCLUDE_DIR})
-	#endif()
+	endif()
 	
 	if(OPENAL)
 		add_definitions(-DUSE_OPENAL)
@@ -1427,7 +1445,7 @@ if(MSVC)
         ${PNG_LIBRARY}
         ${JPEG_LIBRARY}
         ${GLEW_LIBRARY}
-	${CMAKE_DL_LIBS}
+		${CMAKE_DL_LIBS}
 		)
 		
 	#CMAKE_BINARY_DIR

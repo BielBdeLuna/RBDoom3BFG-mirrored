@@ -147,7 +147,9 @@ __________________________________________________________
 5. Use the VC13 solution to compile what you need:
 	RBDOOM-3-BFG/build/RBDoom3BFG.sln
 	
-6. Download ffmpeg-20140405-git-ec8789a-win32-shared.7z from ffmpeg.zeranoe.com/builds/win32/shared
+6. Download ffmpeg-20151105-git-c878082-win32-shared.7z from ffmpeg.zeranoe.com/builds/win32/shared
+ 	or
+	ffmpeg-20151105-git-c878082-win64-shared.7z from ffmpeg.zeranoe.com/builds/win64/shared
 
 7. Extract the FFmpeg DLLs to your current build directory under RBDOOM-3-BFG/build/
 
@@ -301,21 +303,34 @@ __________________________________________
 - Changed light interaction shaders to use Half-Lambert lighting like in Half-Life 2 to 
 	make the game less dark. https://developer.valvesoftware.com/wiki/Half_Lambert
 
-- True 64 bit HDR lighting with adaptive tone mapping
+- True 64 bit HDR lighting with adaptive tone mapping and gamma-correct rendering in linear RGB space
 
-	The used Reinhard operator adds a bit more contrast to the game and gives it a harder look.
+- Enhanced Subpixel Morphological Antialiasing
+	For more information see "Anti-Aliasing Methods in CryENGINE 3" and the docs at http://www.iryoku.com/smaa/
 
 - Filmic post process effects like Technicolor color grading and film grain
+
+- Additional ambient render pass to make the game less dark similar to the Quake 4 r_forceAmbient technique
 
 ___________________________________________________
 
 9) CONSOLE VARIABLES
 __________________________________________
 
+r_antiAliasing - Different Anti-Aliasing modes
+
 r_useShadowMapping [0 or 1] - Use soft shadow mapping instead of hard stencil shadows
 
-r_useHDR [0 or 1] - Use High Dynamic Range lighting with adaptive tone mapping
+r_useHDR [0 or 1] - Use High Dynamic Range lighting
 
+r_hdrAutoExposure [0 or 1] - Adaptive tonemapping with HDR
+	This allows to have very bright or very dark scenes but the camera will adopt to it so the scene won't loose details
+	
+r_exposure [0 .. 1] - Default 0.5, Controls brightness and affects HDR exposure key
+	This is what you change in the video brightness options
+
+r_useSSAO [0 .. 1] - Use Screen Space Ambient Occlusion to darken the corners in the scene
+	
 r_useFilmicPostProcessEffects [0 or 1] - Apply several post process effects to mimic a filmic look"
 
 
@@ -324,9 +339,12 @@ ___________________________________________________
 10) KNOWN ISSUES
 __________________________________________
 
-Doom 3 wasn't designed to work with shadow maps so:
+- HDR does not work with old-school stencil shadows
+
+- MSAA anti-aliasing modes don't work with HDR: Use SMAA
 
 - Some lights cause shadow acne with shadow mapping
+
 - Some shadows might almost disappear due to the shadow filtering
 
 ___________________________________________________
@@ -369,11 +387,7 @@ mod directory, you should first specify your mod directory adding the following 
 
 "+set fs_game modDirectoryName"
 
-as well as force the content of your mod directory over the content of the game with the following command:
-
-"+set fs_resourceLoadPriority 0"
-
-so it would end up looking like: RBDoom3BFG +set fs_resourceLoadPriority 0 +set fs_game modDirectoryName
+so it would end up looking like: RBDoom3BFG +set fs_game modDirectoryName
 
 
 IMPORTANT: RBDOOM-3-BFG does not support old Doom 3 modiciations that include sourcecode modifications in binary form (.dll)
