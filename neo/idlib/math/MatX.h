@@ -836,6 +836,7 @@ ID_INLINE void idMatX::Zero()
 		_mm_store_ps( mat + i, _mm_setzero_ps() );
 	}
 #else
+	s;
 	memset( mat, 0, numRows * numColumns * sizeof( float ) );
 #endif
 }
