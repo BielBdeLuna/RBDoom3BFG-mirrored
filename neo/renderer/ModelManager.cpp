@@ -32,12 +32,8 @@ If you have questions concerning this license or the applicable additional terms
 #include "Model_local.h"
 #include "tr_local.h"	// just for R_FreeWorldInteractions and R_CreateWorldInteractions
 
-idCVar binaryLoadRenderModels( "binaryLoadRenderModels", "1", 0, "enable binary load/write of render models" );
+idCVar r_binaryLoadRenderModels( "r_binaryLoadRenderModels", "1", 0, "enable binary load/write of render models" );
 idCVar preload_MapModels( "preload_MapModels", "1", CVAR_SYSTEM | CVAR_BOOL, "preload models during begin or end levelload" );
-
-// RB begin
-idCVar postLoadExportModels( "postLoadExportModels", "0", CVAR_BOOL | CVAR_RENDERER, "export models after loading to OBJ model format" );
-// RB end
 
 class idRenderModelManagerLocal : public idRenderModelManager
 {
@@ -309,7 +305,7 @@ idRenderModel* idRenderModelManagerLocal::GetModel( const char* _modelName, bool
 				// Get the timestamp on the original file, if it's newer than what is stored in binary model, regenerate it
 				ID_TIME_T sourceTimeStamp = fileSystem->GetTimestamp( canonical );
 				
-				if( model->SupportsBinaryModel() && binaryLoadRenderModels.GetBool() )
+				if( model->SupportsBinaryModel() && r_binaryLoadRenderModels.GetBool() )
 				{
 					idFileLocal file( fileSystem->OpenFileReadMemory( generatedFileName ) );
 					model->PurgeModel();
@@ -341,8 +337,7 @@ idRenderModel* idRenderModelManagerLocal::GetModel( const char* _modelName, bool
 	
 	idRenderModel* model = NULL;
 	
-	// RB: added dae
-	if( ( extension.Icmp( "dae" ) == 0 ) || ( extension.Icmp( "ase" ) == 0 ) || ( extension.Icmp( "lwo" ) == 0 ) || ( extension.Icmp( "flt" ) == 0 ) || ( extension.Icmp( "ma" ) == 0 ) )
+	if( ( extension.Icmp( "ase" ) == 0 ) || ( extension.Icmp( "lwo" ) == 0 ) || ( extension.Icmp( "flt" ) == 0 ) || ( extension.Icmp( "ma" ) == 0 ) )
 	{
 		model = new( TAG_MODEL ) idRenderModelStatic;
 	}
@@ -377,7 +372,7 @@ idRenderModel* idRenderModelManagerLocal::GetModel( const char* _modelName, bool
 		
 		idFileLocal file( fileSystem->OpenFileReadMemory( generatedFileName ) );
 		
-		if( !model->SupportsBinaryModel() || !binaryLoadRenderModels.GetBool() )
+		if( !model->SupportsBinaryModel() || !r_binaryLoadRenderModels.GetBool() )
 		{
 			model->InitFromFile( canonical );
 		}
@@ -440,33 +435,6 @@ idRenderModel* idRenderModelManagerLocal::GetModel( const char* _modelName, bool
 	{
 		fileSystem->AddModelPreload( model->Name() );
 	}
-	
-	// RB begin
-	if( postLoadExportModels.GetBool() && ( model != defaultModel && model != beamModel && model != spriteModel ) )
-	{
-		idStrStatic< MAX_OSPATH > exportedFileName;
-		
-		exportedFileName = "exported/rendermodels/";
-		exportedFileName.AppendPath( canonical );
-		exportedFileName.SetFileExtension( ".obj" );
-		
-		ID_TIME_T sourceTimeStamp = fileSystem->GetTimestamp( canonical );
-		ID_TIME_T timeStamp = fileSystem->GetTimestamp( exportedFileName );
-		
-		// TODO only update if generated has changed
-		
-		//if( timeStamp == FILE_NOT_FOUND_TIMESTAMP )
-		{
-			idFileLocal objFile( fileSystem->OpenFileWrite( exportedFileName, "fs_basepath" ) );
-			idLib::Printf( "Writing %s\n", exportedFileName.c_str() );
-			
-			exportedFileName.SetFileExtension( ".mtl" );
-			idFileLocal mtlFile( fileSystem->OpenFileWrite( exportedFileName, "fs_basepath" ) );
-			
-			model->ExportOBJ( objFile, mtlFile );
-		}
-	}
-	// RB end
 	
 	AddModel( model );
 	

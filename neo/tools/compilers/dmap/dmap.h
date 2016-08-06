@@ -3,7 +3,6 @@
 
 Doom 3 GPL Source Code
 Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2013-2015 Robert Beckebans
 
 This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).
 
@@ -37,7 +36,6 @@ typedef struct primitive_s
 	// only one of these will be non-NULL
 	struct bspbrush_s* 	brush;
 	struct mapTri_s* 	tris;
-	struct mapTri_s*	bsptris;
 } primitive_t;
 
 
@@ -67,15 +65,6 @@ typedef struct mapTri_s
 	
 	const idMaterial* 	material;
 	void* 				mergeGroup;		// we want to avoid merging triangles
-	
-	// RB begin
-	int					polygonId;		// n-gon number from original face used for area portal construction
-	
-	const MapPolygonMesh*	originalMapMesh;
-//	idWinding* 			visibleHull;	// also clipped to the solid parts of the world
-
-	// RB end
-	
 	// from different fixed groups, like guiSurfs and mirrors
 	int					planeNum;			// not set universally, just in some areas
 	
@@ -83,6 +72,7 @@ typedef struct mapTri_s
 	const struct hashVert_s* hashVert[3];
 	struct optVertex_s* optVert[3];
 } mapTri_t;
+
 
 typedef struct
 {
@@ -164,16 +154,15 @@ typedef struct node_s
 	idBounds			bounds;		// valid after portalization
 	
 	// nodes only
+	side_t* 			side;		// the side that created the node
 	struct node_s* 		children[2];
 	int					nodeNumber;	// set after pruning
 	
 	// leafs only
 	bool				opaque;		// view can never be inside
 	
-	// RB: needed for areaportal construction
 	uBrush_t* 			brushlist;	// fragments of all brushes in this leaf
-	mapTri_t*			areaPortalTris;
-	// --
+	// needed for FindSideForPortal
 	
 	int					area;		// determined by flood filling up to areaportals
 	int					occupied;	// 1 or greater can reach entity
@@ -367,18 +356,14 @@ void GLS_EndScene();
 
 #define	MAX_INTER_AREA_PORTALS	1024
 
-struct interAreaPortal_t
+typedef struct
 {
-	int				area0, area1;
-	side_t*			side = NULL;
-	
-	// RB begin
-	int				polygonId;
-	idFixedWinding	w;
-	// RB end
-};
+	int		area0, area1;
+	side_t*	side;
+} interAreaPortal_t;
 
-extern idList<interAreaPortal_t> interAreaPortals;
+extern	interAreaPortal_t interAreaPortals[MAX_INTER_AREA_PORTALS];
+extern	int					numInterAreaPortals;
 
 bool FloodEntities( tree_t* tree );
 void FillOutside( uEntity_t* e );
@@ -391,9 +376,7 @@ void FreePortal( uPortal_t* p );
 // glfile.cpp -- write a debug file to be viewd with glview.exe
 
 void OutputWinding( idWinding* w, idFile* glview );
-
-void WriteGLView( tree_t* tree, const char* source, int entityNum, bool force = false );
-void WriteGLView( bspface_t* list, const char* source );
+void WriteGLView( tree_t* tree, char* source );
 
 //=============================================================================
 
@@ -414,7 +397,7 @@ void FreeTreePortals_r( node_t* node );
 
 
 bspface_t*	MakeStructuralBspFaceList( primitive_t* list );
-//bspface_t*	MakeVisibleBspFaceList( primitive_t* list );
+bspface_t*	MakeVisibleBspFaceList( primitive_t* list );
 tree_t*		FaceBSP( bspface_t* list );
 
 node_t*		NodeForPoint( node_t* node, const idVec3& origin );
@@ -428,10 +411,6 @@ void	ClipSidesByTree( uEntity_t* e );
 void	SplitTrisToSurfaces( mapTri_t* triList, tree_t* tree );
 void	PutPrimitivesInAreas( uEntity_t* e );
 void	Prelight( uEntity_t* e );
-
-// RB begin
-void	FilterMeshesIntoTree( uEntity_t* e );
-// RB end
 
 //=============================================================================
 
@@ -520,10 +499,14 @@ void		ClipTriList( const mapTri_t* list, const idPlane& plane, float epsilon, ma
 
 // output.cpp
 
-int			NumberNodes_r( node_t* node, int nextNumber );
-
 srfTriangles_t*	ShareMapTriVerts( const mapTri_t* tris );
 void WriteOutputFile();
 
 //=============================================================================
 
+// shadowopt.cpp
+
+srfTriangles_t* CreateLightShadow( optimizeGroup_t* shadowerGroups, const mapLight_t* light );
+void		FreeBeamTree( struct beamTree_s* beamTree );
+
+void		CarveTriByBeamTree( const struct beamTree_s* beamTree, const mapTri_t* tri, mapTri_t** lit, mapTri_t** unLit );
