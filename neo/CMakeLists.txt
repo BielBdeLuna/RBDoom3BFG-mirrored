@@ -566,6 +566,7 @@ set(GAMED3XP_INCLUDES
 	d3xp/Sound.h
 	d3xp/Target.h
 	d3xp/Trigger.h
+    d3xp/Vehicle.h
 	d3xp/Weapon.h
 	d3xp/WorldSpawn.h)
 	
@@ -603,6 +604,7 @@ set(GAMED3XP_SOURCES
 	d3xp/Sound.cpp
 	d3xp/Target.cpp
 	d3xp/Trigger.cpp
+    d3xp/Vehicle.cpp
 	d3xp/Weapon.cpp
 	d3xp/WorldSpawn.cpp)
 

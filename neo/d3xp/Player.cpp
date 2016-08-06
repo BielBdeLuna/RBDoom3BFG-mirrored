@@ -1607,6 +1607,7 @@ idPlayer::idPlayer():
 	focusCharacter			= NULL;
 	talkCursor				= 0;
 	focusVehicle			= NULL;
+	Vehicle					= NULL;
 	cursor					= NULL;
 	
 	oldMouseX				= 0;
@@ -1815,6 +1816,7 @@ void idPlayer::Init()
 	focusCharacter			= NULL;
 	talkCursor				= 0;
 	focusVehicle			= NULL;
+	Vehicle					= NULL;
 	
 	// remove any damage effects
 	playerView.ClearEffects();
@@ -2496,6 +2498,7 @@ void idPlayer::Save( idSaveGame* savefile ) const
 	savefile->WriteInt( talkCursor );
 	savefile->WriteInt( focusTime );
 	savefile->WriteObject( focusVehicle );
+	savefile->WriteObject( Vehicle );
 	savefile->WriteUserInterface( cursor, false );
 	
 	savefile->WriteInt( oldMouseX );
@@ -2585,6 +2588,8 @@ void idPlayer::Restore( idRestoreGame* savefile )
 	int	  num;
 	float set;
 	
+	gameLocal.Printf( "attempting to restore the player\n");
+
 	savefile->ReadUsercmd( usercmd );
 	playerView.Restore( savefile );
 	
@@ -2812,6 +2817,7 @@ void idPlayer::Restore( idRestoreGame* savefile )
 	savefile->ReadInt( talkCursor );
 	savefile->ReadInt( focusTime );
 	savefile->ReadObject( reinterpret_cast<idClass*&>( focusVehicle ) );
+	savefile->ReadObject( reinterpret_cast<idClass*&>( Vehicle ) );
 	savefile->ReadUserInterface( cursor );
 	
 	savefile->ReadInt( oldMouseX );
@@ -2932,7 +2938,7 @@ void idPlayer::Restore( idRestoreGame* savefile )
 			}
 		}
 	}
-	
+	gameLocal.Printf( "player restored!\n");
 }
 
 /*
@@ -5678,7 +5684,46 @@ void idPlayer::Weapon_NPC()
 		focusCharacter->TalkTo( this );
 	}
 }
+/*
+===============
+idPlayer::Weapon_Vehicle
+===============
+*/
+void idPlayer::Weapon_Vehicle()
+{
+	if( idealWeapon != currentWeapon )
+	{
+		Weapon_Combat();
+	}
+	StopFiring();
+	//weapon.GetEntity()->LowerWeapon();
 
+	bool wasDown = ( oldButtons & ( BUTTON_ATTACK | BUTTON_USE ) ) != 0;
+	bool isDown = ( usercmd.buttons & ( BUTTON_ATTACK | BUTTON_USE ) ) != 0;
+	if( isDown && !wasDown )
+	{
+		buttonMask |= BUTTON_ATTACK;
+		if ( Vehicle != NULL) {
+			if ( focusVehicle == Vehicle ) {
+				//exit vehicle
+				//Show();
+				Vehicle->Use( this );
+				RetifyVehicle();
+			} else {
+				//the player is already in a vehicle but tries to enter another vehicle
+				RetifyVehicle(); //this will not change Vehicle but give a printed message
+			}
+		} else {
+			if ( focusVehicle->TestDriveable() ) {
+				//enter vehicle
+				//Hide();
+				RetifyVehicle();
+				Vehicle->Use( this );
+
+			}
+		}
+	}
+}
 /*
 ===============
 idPlayer::LowerWeapon
@@ -5859,6 +5904,10 @@ void idPlayer::UpdateWeapon()
 	else 	if( focusCharacter && ( focusCharacter->health > 0 ) )
 	{
 		Weapon_NPC();
+	}
+	else if ( focusVehicle )
+	{
+		Weapon_Vehicle();
 	}
 	else
 	{
@@ -7532,7 +7581,8 @@ void idPlayer::UseVehicle()
 	idEntity* ent;
 	
 	if( GetBindMaster() && GetBindMaster()->IsType( idAFEntity_Vehicle::Type ) )
-	{
+	{	//EXIT THE VEHICLE
+		SelectWeapon( currentWeapon, false ); //when exit we go back to our weapon
 		Show();
 		static_cast<idAFEntity_Vehicle*>( GetBindMaster() )->Use( this );
 	}
@@ -7545,11 +7595,24 @@ void idPlayer::UseVehicle()
 		{
 			ent = gameLocal.entities[ trace.c.entityNum ];
 			if( ent && ent->IsType( idAFEntity_Vehicle::Type ) )
-			{
+			{	//ENTER THE VEHICLE
+				SelectWeapon( IMPULSE_0, false ); //so we make sure we don't go into the vehicle with the flashlight on.
 				Hide();
 				static_cast<idAFEntity_Vehicle*>( ent )->Use( this );
 			}
 		}
+	}
+}
+
+void idPlayer::RetifyVehicle() {
+	if ( Vehicle != NULL ) {
+		if ( focusVehicle && ( Vehicle != focusVehicle ) ) {
+			gameLocal.Printf( "player is trying to use another vehicle within a vehicle!\n" );
+		} else {
+			Vehicle = NULL;
+		}
+	} else {
+		Vehicle = focusVehicle;
 	}
 }
 
@@ -7601,15 +7664,19 @@ void idPlayer::PerformImpulse( int impulse )
 		}
 		case IMPULSE_16:
 		{
-			if( flashlight.IsValid() )
-			{
-				if( flashlight.GetEntity()->lightOn )
+			if( Vehicle != NULL ) {
+				Vehicle->ToggleHeadLights();
+			} else {
+				if( flashlight.IsValid() )
 				{
-					FlashlightOff();
-				}
-				else if( !spectating && weaponEnabled && !hiddenWeapon && !gameLocal.world->spawnArgs.GetBool( "no_Weapons" ) )
-				{
-					FlashlightOn();
+					if( flashlight.GetEntity()->lightOn )
+					{
+						FlashlightOff();
+					}
+					else if( !spectating && weaponEnabled && !hiddenWeapon && !gameLocal.world->spawnArgs.GetBool( "no_Weapons" ) )
+					{
+						FlashlightOn();
+					}
 				}
 			}
 			break;
@@ -7628,9 +7695,13 @@ void idPlayer::PerformImpulse( int impulse )
 					{
 						TogglePDA();
 					}
-					else if( weapon_pda >= 0 )
+					else
 					{
-						SelectWeapon( weapon_pda, true );
+						if( Vehicle && ( usercmd.buttons & BUTTON_RUN ) ) {
+							Vehicle->ToggleEngine();
+						} else if( weapon_pda >= 0 ) {
+							SelectWeapon( weapon_pda, true );
+						}
 					}
 #if !defined(ID_RETAIL) && !defined(ID_RETAIL_INTERNAL)
 				}
@@ -8882,7 +8953,7 @@ void idPlayer::Think()
 		acc->dir[1] = usercmd.rightmove - oldCmd.rightmove;
 		acc->dir[0] = acc->dir[2] = 0;
 	}
-	
+
 	// zooming
 	if( ( usercmd.buttons ^ oldCmd.buttons ) & BUTTON_ZOOM )
 	{
@@ -8992,9 +9063,19 @@ void idPlayer::Think()
 	{
 		UpdateSpectating();
 	}
-	else if( health > 0 )
+	else
 	{
-		UpdateWeapon();
+		if ( !gameLocal.inCinematic ) {
+			if ( Vehicle != NULL ) {
+				if ( ( health <= 0 ) || (  g_dragEntity.GetBool() ) || ( usercmd.buttons & BUTTON_USE ) ) {
+					Vehicle->ForceAbandonVehicle();
+					//Show();
+				}
+			}
+		}
+		if ( health > 0 ) {
+			UpdateWeapon();
+		}
 	}
 	
 	UpdateFlashlight();
@@ -10642,7 +10723,11 @@ void idPlayer::CalculateRenderView()
 		}
 		else if( pm_thirdPerson.GetBool() )
 		{
-			OffsetThirdPersonView( pm_thirdPersonAngle.GetFloat(), pm_thirdPersonRange.GetFloat(), pm_thirdPersonHeight.GetFloat(), pm_thirdPersonClip.GetBool() );
+			if( Vehicle != NULL ) {
+				OffsetThirdPersonView( Vehicle->GetThirdPersonAngle(), Vehicle->GetThirdPersonRange(), Vehicle->GetThirdPersonHeight(), pm_thirdPersonClip.GetBool() );
+			} else {
+				OffsetThirdPersonView( pm_thirdPersonAngle.GetFloat(), pm_thirdPersonRange.GetFloat(), pm_thirdPersonHeight.GetFloat(), pm_thirdPersonClip.GetBool() );
+			}
 		}
 		else if( pm_thirdPersonDeath.GetBool() )
 		{
@@ -11440,9 +11525,19 @@ void idPlayer::ClientThink( const int curTime, const float fraction, const bool 
 	// this may use firstPersonView, or a thirdPerson / camera view
 	CalculateRenderView();
 	
-	if( !gameLocal.inCinematic && weapon.GetEntity() && ( health > 0 ) && !( common->IsMultiplayer() && spectating ) )
+	if( !gameLocal.inCinematic && !( common->IsMultiplayer() && spectating ) )
 	{
-		UpdateWeapon();
+		if ( Vehicle != NULL ) {
+			if ( ( health <= 0 ) || (  g_dragEntity.GetBool() ) || ( usercmd.buttons & BUTTON_USE ) ) {
+				Vehicle->ForceAbandonVehicle();
+				//Show();
+			}
+		}
+
+		if ( weapon.GetEntity() && ( health > 0 ) ) {
+			UpdateWeapon();
+		}
+
 	}
 	
 	UpdateFlashlight();

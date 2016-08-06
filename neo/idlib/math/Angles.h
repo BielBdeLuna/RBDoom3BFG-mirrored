@@ -99,6 +99,9 @@ public:
 	const float* 	ToFloatPtr() const;
 	float* 			ToFloatPtr();
 	const char* 	ToString( int precision = 2 ) const;
+
+	idVec3 			ToRight( void ) const;
+	idVec3 			ToUp( void ) const;
 };
 
 extern idAngles ang_zero;

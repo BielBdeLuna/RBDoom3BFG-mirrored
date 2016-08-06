@@ -358,7 +358,7 @@ public:
 	int						weapon_bloodstone_active2;
 	int						weapon_bloodstone_active3;
 	bool					harvest_lock;
-	
+
 	int						heartRate;
 	idInterpolate<float>	heartInfo;
 	int						lastHeartAdjust;
@@ -470,6 +470,7 @@ public:
 	void					SetLevelTrigger( const char* levelName, const char* triggerName );
 	
 	void					CacheWeapons();
+	void					RetifyVehicle();
 	
 	void					EnterCinematic();
 	void					ExitCinematic();
@@ -700,7 +701,7 @@ public:
 	void					UpdateSkinSetup();
 	
 	bool					OnLadder() const;
-	
+
 	virtual	void			UpdatePlayerIcons();
 	virtual	void			DrawPlayerIcons();
 	virtual	void			HidePlayerIcons();
@@ -871,6 +872,7 @@ private:
 	int						talkCursor;				// show the state of the focusCharacter (0 == can't talk/dead, 1 == ready to talk, 2 == busy talking)
 	int						focusTime;
 	idAFEntity_Vehicle* 	focusVehicle;
+	idAFEntity_Vehicle*		Vehicle;
 	idUserInterface* 		cursor;
 	
 	// full screen guis track mouse movements directly
@@ -924,6 +926,7 @@ private:
 	void					Weapon_Combat();
 	void					Weapon_NPC();
 	void					Weapon_GUI();
+	void					Weapon_Vehicle();
 	void					UpdateWeapon();
 	void					UpdateFlashlight();
 	void					FlashlightOn();
@@ -964,6 +967,7 @@ private:
 	bool					WeaponAvailable( const char* name );
 	
 	void					UseVehicle();
+	void					UpdateVehicleActions();
 	
 	void					Event_GetButtons();
 	void					Event_GetMove();

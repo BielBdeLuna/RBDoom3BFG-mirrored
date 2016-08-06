@@ -139,6 +139,36 @@ idVec3 idAngles::ToForward() const
 
 /*
 =================
+idAngles::ToRight
+=================
+*/
+idVec3 idAngles::ToRight( void ) const {
+	float sr, sp, sy, cr, cp, cy;
+
+	idMath::SinCos( DEG2RAD( yaw ), sy, cy );
+	idMath::SinCos( DEG2RAD( pitch ), sp, cp );
+	idMath::SinCos( DEG2RAD( roll ), sr, cr );
+
+	return idVec3( -sr * sp * cy + cr * sy, -sr * sp * sy + -cr * cy, -sr * cp  );
+}
+
+/*
+=================
+idAngles::ToUp
+=================
+*/
+idVec3 idAngles::ToUp( void ) const {
+	float sr, sp, sy, cr, cp, cy;
+
+	idMath::SinCos( DEG2RAD( yaw ), sy, cy );
+	idMath::SinCos( DEG2RAD( pitch ), sp, cp );
+	idMath::SinCos( DEG2RAD( roll ), sr, cr );
+
+	return idVec3( cr * sp * cy + -sr * -sy, cr * sp * sy + -sr * cy, cr * cp  );
+}
+
+/*
+=================
 idAngles::ToQuat
 =================
 */
