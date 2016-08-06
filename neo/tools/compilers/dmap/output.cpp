@@ -3,7 +3,6 @@
 
 Doom 3 GPL Source Code
 Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2013-2015 Robert Beckebans
 
 This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).
 
@@ -249,7 +248,6 @@ srfTriangles_t*	ShareMapTriVerts( const mapTri_t* tris )
 					break;
 				}
 			}
-			
 			if( j == numVerts )
 			{
 				numVerts++;
@@ -563,7 +561,7 @@ static void WriteNode_r( node_t* node )
 	}
 }
 
-int NumberNodes_r( node_t* node, int nextNumber )
+static int NumberNodes_r( node_t* node, int nextNumber )
 {
 	if( node->planenum == PLANENUM_LEAF )
 	{
@@ -613,23 +611,12 @@ static void WriteOutputPortals( uEntity_t* e )
 	idWinding*			w;
 	
 	procFile->WriteFloatString( "interAreaPortals { /* numAreas = */ %i /* numIAP = */ %i\n\n",
-								e->numAreas, interAreaPortals.Num() );
+								e->numAreas, numInterAreaPortals );
 	procFile->WriteFloatString( "/* interAreaPortal format is: numPoints positiveSideArea negativeSideArea ( point) ... */\n" );
-	for( i = 0 ; i < interAreaPortals.Num() ; i++ )
+	for( i = 0 ; i < numInterAreaPortals ; i++ )
 	{
 		iap = &interAreaPortals[i];
-		
-		// RB: support new area portals
-		if( iap->side )
-		{
-			w = iap->side->winding;
-		}
-		else
-		{
-			w = & iap->w;
-		}
-		// RB end
-		
+		w = iap->side->winding;
 		procFile->WriteFloatString( "/* iap %i */ %i %i %i ", i, w->GetNumPoints(), iap->area0, iap->area1 );
 		for( j = 0 ; j < w->GetNumPoints() ; j++ )
 		{

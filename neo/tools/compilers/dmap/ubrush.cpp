@@ -413,6 +413,7 @@ void WriteBspBrushMap( const char* name, uBrush_t* list )
 /*
 ====================
 FilterBrushIntoTree_r
+
 ====================
 */
 int FilterBrushIntoTree_r( uBrush_t* b, node_t* node )
@@ -434,14 +435,10 @@ int FilterBrushIntoTree_r( uBrush_t* b, node_t* node )
 		// classify the leaf by the structural brush
 		if( b->opaque )
 		{
-			if( !node->opaque )
-			{
-				node->opaque = true;
-				return 1;
-			}
+			node->opaque = true;
 		}
 		
-		return 0;
+		return 1;
 	}
 	
 	// split it by the node plane

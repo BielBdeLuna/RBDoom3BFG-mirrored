@@ -128,8 +128,6 @@ typedef enum
 	EDITOR_MATERIAL				= BIT( 11 )
 } toolFlag_t;
 
-extern int			com_editors;			// currently opened editor(s)
-
 #define STRTABLE_ID				"#str_"
 #define STRTABLE_ID_LENGTH		5
 
